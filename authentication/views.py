@@ -89,14 +89,14 @@ def google_callback(request):
         user = User.objects.create_user(
             username=email,
             email=email,
-            first_name=user_info.get('given_name'),
-            last_name=user_info.get('family_name')
+            first_name=user_info.get('given_name') or '',
+            last_name=user_info.get('family_name') or ''
         )
 
     user.google_id = user_info.get('sub')
     user.access_token = credentials.token
     user.refresh_token = credentials.refresh_token
-    user.profile_picture = user_info.get('picture')
+    user.profile_picture = user_info.get('picture') or ''
     user.save()
     
     login(request, user)
