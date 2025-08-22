@@ -8,6 +8,7 @@ from oauthlib.oauth2 import InvalidGrantError
 from .models import User 
 import requests
 import os
+import uuid 
 
 CLIENT_SECRETS_CONFIG = {
     "web": {
@@ -21,11 +22,15 @@ CLIENT_SECRETS_CONFIG = {
     }
 }
 
+ 
+
 def google_login(request):
-    # Set these BEFORE creating the flow for local dev
     if settings.DEBUG:
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+    
+    # Generate a custom UUID state instead of letting flow generate it
+    custom_state = str(uuid.uuid4())
     
     flow = Flow.from_client_config(
         client_config=CLIENT_SECRETS_CONFIG,
@@ -33,25 +38,28 @@ def google_login(request):
         redirect_uri=settings.GOOGLE_REDIRECT_URI
     )
 
-    authorization_url, state = flow.authorization_url(
+    # Pass the custom state to authorization_url
+    authorization_url, _ = flow.authorization_url(
         access_type='offline',
         prompt='consent',
-        include_granted_scopes='true'
+        include_granted_scopes='true',
+        state=custom_state  # Use our custom state
     )
     
-    # Ensure session exists and force save
+    # Force session creation and save the custom state
     if not request.session.session_key:
         request.session.create()
     
-    request.session['state'] = state
-    request.session.modified = True  # Force Django to save session
+    request.session['state'] = custom_state  # Store our custom state
+    request.session.modified = True
     request.session.save()
     
     print(f"LOGIN - Session ID: {request.session.session_key}")
-    print(f"LOGIN - Stored state: {state}")
+    print(f"LOGIN - Generated custom state: {custom_state}")
     print(f"LOGIN - Session data: {dict(request.session)}")
     
     return redirect(authorization_url)
+
 
 
 
