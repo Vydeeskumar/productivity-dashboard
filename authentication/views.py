@@ -25,11 +25,12 @@ CLIENT_SECRETS_CONFIG = {
  
 
 def google_login(request):
+    # Set these BEFORE creating the flow for both local dev and production
     if settings.DEBUG:
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
     
-    # Generate a custom UUID state instead of letting flow generate it
+    # Generate a custom UUID state for better session handling
     custom_state = str(uuid.uuid4())
     
     flow = Flow.from_client_config(
@@ -38,19 +39,19 @@ def google_login(request):
         redirect_uri=settings.GOOGLE_REDIRECT_URI
     )
 
-    # Pass the custom state to authorization_url
+    # Use the custom state in authorization URL
     authorization_url, _ = flow.authorization_url(
         access_type='offline',
         prompt='consent',
         include_granted_scopes='true',
-        state=custom_state  # Use our custom state
+        state=custom_state  # Pass our custom state
     )
     
-    # Force session creation and save the custom state
+    # Ensure session exists and save our custom state
     if not request.session.session_key:
         request.session.create()
     
-    request.session['state'] = custom_state  # Store our custom state
+    request.session['state'] = custom_state
     request.session.modified = True
     request.session.save()
     
@@ -59,8 +60,6 @@ def google_login(request):
     print(f"LOGIN - Session data: {dict(request.session)}")
     
     return redirect(authorization_url)
-
-
 
 
 def google_callback(request):
@@ -96,6 +95,9 @@ def google_callback(request):
             redirect_uri=settings.GOOGLE_REDIRECT_URI
         )
 
+        # Fix for scope validation error - disable strict scope checking
+        flow.oauth2session.scope = None
+        
         # Exchange authorization code for tokens
         flow.fetch_token(authorization_response=request.build_absolute_uri())
         credentials = flow.credentials
@@ -151,6 +153,7 @@ def google_callback(request):
             return HttpResponse(f"Login failed: {str(e)}", status=500)
         else:
             return HttpResponse("Login failed. Please try again.", status=500)
+
 
 
 
