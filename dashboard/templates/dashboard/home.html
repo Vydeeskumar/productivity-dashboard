@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productivity Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'dashboard/style.css' %}">
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <div class="container">
+            <!-- Header Section -->
+            <div class="header">
+                <div class="profile-section">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture }}" alt="Profile" class="profile-pic" width="60">
+                    {% endif %}
+                    <h1 class="welcome-text">Welcome back, {{ user.first_name }}!</h1>
+                </div>
+                <a href="{% url 'authentication:logout' %}" class="logout-link">Logout</a>
+            </div>
+
+            <!-- Error Display -->
+            {% if error_message %}
+                <div class="error-box">
+                    <strong>⚠️ Error:</strong>
+                    <pre>{{ error_message }}</pre>
+                </div>
+            {% endif %}
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Google Sheets Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <h2 class="card-title">Your Google Sheets</h2>
+                    </div>
+                    {% if sheets %}
+                        <ul class="item-list">
+                            {% for sheet in sheets %}
+                                <li class="item">
+                                    <div class="item-title">{{ sheet.name }}</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% elif not error_message %}
+                        <div class="empty-state">No spreadsheets found</div>
+                    {% endif %}
+                </div>
+
+                <!-- Calendar Events Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📅</span>
+                        <h2 class="card-title">Upcoming Events</h2>
+                    </div>
+                    {% if calendar_events %}
+                        <ul class="item-list">
+                            {% for event in calendar_events %}
+                                <li class="item">
+                                    <div class="item-title">{{ event.summary|default:"No Title" }}</div>
+                                    <div class="item-meta">
+                                        {% if event.start.dateTime %}
+                                            <span class="item-date">📅 {{ event.start.dateTime|slice:":10" }} at {{ event.start.dateTime|slice:"11:16" }}</span>
+                                        {% elif event.start.date %}
+                                            <span class="item-date">📅 {{ event.start.date }} (All day)</span>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% elif not error_message %}
+                        <div class="empty-state">No upcoming events</div>
+                    {% endif %}
+                </div>
+
+                <!-- Google Tasks Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">✅</span>
+                        <h2 class="card-title">Pending Tasks</h2>
+                    </div>
+                    {% if tasks %}
+                        <ul class="item-list">
+                            {% for task in tasks %}
+                                <li class="item">
+                                    <div class="item-title">{{ task.title|default:"Untitled Task" }}</div>
+                                    <div class="item-meta">
+                                        {% if task.list_name %}
+                                            <span>📋 {{ task.list_name }}</span>
+                                        {% endif %}
+                                        {% if task.due %}
+                                            <span class="item-due">⏰ Due: {{ task.due|slice:":10" }}</span>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% elif not error_message %}
+                        <div class="empty-state">No pending tasks</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Login Screen -->
+        <div class="login-container">
+            <div class="login-card">
+                <h1 class="login-title">Productivity Dashboard</h1>
+                <p style="margin-bottom: 30px; color: #718096;">Connect your Google services in one place</p>
+                <a href="{% url 'authentication:google_login' %}" class="login-btn">🚀 Login with Google</a>
+            </div>
+        </div>
+    {% endif %}
+</body>
+</html>
